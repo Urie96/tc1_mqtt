@@ -48,6 +48,7 @@ def generate(pages_dir, output_file):
             lines.append(f"  {hex_bytes},")
 
         lines.append("};")
+        lines.append(f"const unsigned int {var_name}_len = sizeof({var_name});")
         lines.append("")
 
     with open(output_file, "w") as f:

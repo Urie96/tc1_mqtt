@@ -30,12 +30,6 @@ void appRestoreDefault_callback( void * const user_config_data, uint32_t size )
 
     user_config_t* userConfigDefault = user_config_data;
 
-    // userConfigDefault->user[0] = 0;
-    // userConfigDefault->mqtt_ip[0] = 0;
-    // userConfigDefault->mqtt_port = 0;
-    // userConfigDefault->mqtt_user[0] = 0;
-    // userConfigDefault->mqtt_password[0] = 0;
-
     sprintf(userConfigDefault->mqtt_ip, CONFIG_MQTT_IP);
     userConfigDefault->mqtt_port = CONFIG_MQTT_PORT;
     sprintf(userConfigDefault->mqtt_user, CONFIG_MQTT_USER);
@@ -124,7 +118,6 @@ int application_start( void )
         sprintf( sys_config->micoSystemConfig.name, ZTC_NAME, strMac );
     }
 
-    os_log( "user:%s",user_config->user );
     os_log( "device name:%s",sys_config->micoSystemConfig.name );
     os_log( "mqtt_ip:%s",user_config->mqtt_ip );
     os_log( "mqtt_port:%d",user_config->mqtt_port );

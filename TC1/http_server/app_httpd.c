@@ -39,10 +39,12 @@
 #include "app_httpd.h"
 
 #include "main.h"
+#include "cJSON/cJSON.h"
 
 #define app_httpd_log(M, ...) custom_log("apphttpd", M, ##__VA_ARGS__)
 
 #define HTTPD_HDR_DEFORT (HTTPD_HDR_ADD_SERVER|HTTPD_HDR_ADD_CONN_CLOSE|HTTPD_HDR_ADD_PRAGMA_NO_CACHE)
+#define HTTP_RES_500 "HTTP/1.1 500 Internal Server Error\r\n"
 static bool is_http_init;
 static bool is_handlers_registered;
 struct httpd_wsgi_call g_app_handlers[];
@@ -51,107 +53,134 @@ static int web_send_wifisetting_page(httpd_request_t *req)
 {
   OSStatus err = kNoErr;
   
-  err = httpd_send_all_header(req, HTTP_RES_200, sizeof(wifisetting), HTTP_CONTENT_HTML_STR);
+  err = httpd_send_all_header(req, HTTP_RES_200, wifisetting_len, HTTP_CONTENT_HTML_STR);
   require_noerr_action( err, exit, app_httpd_log("ERROR: Unable to send http wifisetting headers.") );
   
-  err = httpd_send_body(req->sock, wifisetting, sizeof(wifisetting));
+  err = httpd_send_body(req->sock, wifisetting, wifisetting_len);
   require_noerr_action( err, exit, app_httpd_log("ERROR: Unable to send http wifisetting body.") );
   
 exit:
   return err; 
 }
 
-static int web_send_result_page(httpd_request_t *req)
+static int web_send_json(httpd_request_t *req, const char *status, const char *body)
 {
   OSStatus err = kNoErr;
-  bool para_succ = false;
-  int buf_size = 512;
-  char *buf;
-  char value_ssid[maxSsidLen];
-  char value_pass[maxKeyLen];
-  char value_user[maxNameLen];
-  mico_Context_t* context = NULL;
-  
-  context = mico_system_context_get( );
-  
-  buf = malloc(buf_size);
-  
-  err = httpd_get_data(req, buf, buf_size);
-  require_noerr( err, Save_Out );
-  
-  err = httpd_get_tag_from_post_data(buf, "SSID", value_ssid, maxSsidLen);
-  require_noerr( err, Save_Out );
-  
-  err = httpd_get_tag_from_post_data(buf, "USER", value_user, maxNameLen);
-  require_noerr( err, Save_Out );
+  int body_len = strlen(body);
 
-  if(!strncmp(value_ssid, "\0", 1))
-    goto Save_Out;
-  if(!strncmp(value_user, "\0", 1))
-    goto Save_Out;
-  
-  strncpy(context->micoSystemConfig.ssid, value_ssid, maxSsidLen);
-  strncpy(user_config->user, value_user, maxNameLen);
-  
-  err = httpd_get_tag_from_post_data(buf, "PASS", value_pass, maxKeyLen);
-  require_noerr( err, Save_Out );
-  
-  strncpy(context->micoSystemConfig.key, value_pass, maxKeyLen);
-  strncpy(context->micoSystemConfig.user_key, value_pass, maxKeyLen);
+  err = httpd_send_all_header(req, status, body_len, HTTP_CONTENT_JSON_STR);
+  require_noerr_action(err, exit, app_httpd_log("ERROR: Unable to send JSON headers."));
+
+  err = httpd_send_body(req->sock, (const unsigned char *) body, body_len);
+  require_noerr_action(err, exit, app_httpd_log("ERROR: Unable to send JSON body."));
+
+exit:
+  return err;
+}
+
+static bool json_string_is_valid(cJSON *item, size_t max_length, bool required)
+{
+  size_t length;
+
+  if (item == NULL || !cJSON_IsString(item) || item->valuestring == NULL) return false;
+  length = strlen(item->valuestring);
+  return length < max_length && (!required || length > 0);
+}
+
+static int web_save_config(httpd_request_t *req)
+{
+  OSStatus err;
+  char request_body[HTTPD_MAX_MESSAGE];
+  cJSON *json = NULL;
+  cJSON *ssid;
+  cJSON *wifi_password;
+  cJSON *mqtt_host;
+  cJSON *mqtt_port;
+  cJSON *mqtt_username;
+  cJSON *mqtt_password;
+  mico_Context_t *context = mico_system_context_get();
+
+  if (req->body_nbytes >= HTTPD_MAX_MESSAGE - 2) {
+    return web_send_json(req, HTTP_RES_400, "{\"success\":false,\"error\":\"request_too_large\"}");
+  }
+
+  err = httpd_get_data(req, request_body, sizeof(request_body) - 1);
+  if (err != kNoErr) {
+    return web_send_json(req, HTTP_RES_400, "{\"success\":false,\"error\":\"invalid_json\"}");
+  }
+
+  json = cJSON_Parse(request_body);
+  if (json == NULL) {
+    return web_send_json(req, HTTP_RES_400, "{\"success\":false,\"error\":\"invalid_json\"}");
+  }
+
+  ssid = cJSON_GetObjectItem(json, "ssid");
+  wifi_password = cJSON_GetObjectItem(json, "wifi_password");
+  mqtt_host = cJSON_GetObjectItem(json, "mqtt_host");
+  mqtt_port = cJSON_GetObjectItem(json, "mqtt_port");
+  mqtt_username = cJSON_GetObjectItem(json, "mqtt_username");
+  mqtt_password = cJSON_GetObjectItem(json, "mqtt_password");
+
+  if (!json_string_is_valid(ssid, maxSsidLen, true)) {
+    cJSON_Delete(json);
+    return web_send_json(req, HTTP_RES_400, "{\"success\":false,\"error\":\"invalid_ssid\"}");
+  }
+  if (!json_string_is_valid(wifi_password, maxKeyLen, false)) {
+    cJSON_Delete(json);
+    return web_send_json(req, HTTP_RES_400, "{\"success\":false,\"error\":\"invalid_wifi_password\"}");
+  }
+  if (!json_string_is_valid(mqtt_host, SETTING_MQTT_STRING_LENGTH_MAX, true)) {
+    cJSON_Delete(json);
+    return web_send_json(req, HTTP_RES_400, "{\"success\":false,\"error\":\"invalid_mqtt_host\"}");
+  }
+  if (mqtt_port == NULL || !cJSON_IsNumber(mqtt_port) || mqtt_port->valuedouble != mqtt_port->valueint ||
+      mqtt_port->valueint < 1 || mqtt_port->valueint > 65535) {
+    cJSON_Delete(json);
+    return web_send_json(req, HTTP_RES_400, "{\"success\":false,\"error\":\"invalid_mqtt_port\"}");
+  }
+  if (!json_string_is_valid(mqtt_username, SETTING_MQTT_STRING_LENGTH_MAX, false)) {
+    cJSON_Delete(json);
+    return web_send_json(req, HTTP_RES_400, "{\"success\":false,\"error\":\"invalid_mqtt_username\"}");
+  }
+  if (!json_string_is_valid(mqtt_password, SETTING_MQTT_STRING_LENGTH_MAX, false)) {
+    cJSON_Delete(json);
+    return web_send_json(req, HTTP_RES_400, "{\"success\":false,\"error\":\"invalid_mqtt_password\"}");
+  }
+
+  strcpy(context->micoSystemConfig.ssid, ssid->valuestring);
+  strcpy(context->micoSystemConfig.key, wifi_password->valuestring);
+  strcpy(context->micoSystemConfig.user_key, wifi_password->valuestring);
   context->micoSystemConfig.keyLength = strlen(context->micoSystemConfig.key);
-  context->micoSystemConfig.user_keyLength = strlen(context->micoSystemConfig.key);
-  
+  context->micoSystemConfig.user_keyLength = context->micoSystemConfig.keyLength;
   context->micoSystemConfig.channel = 0;
-  memset(context->micoSystemConfig.bssid, 0x0, 6);
+  memset(context->micoSystemConfig.bssid, 0, sizeof(context->micoSystemConfig.bssid));
   context->micoSystemConfig.security = SECURITY_TYPE_AUTO;
   context->micoSystemConfig.dhcpEnable = true;
+  context->micoSystemConfig.configured = allConfigured;
 
-  /* 保存版本号，防止下次启动时恢复默认配置 */
+  strcpy(user_config->mqtt_ip, mqtt_host->valuestring);
+  user_config->mqtt_port = mqtt_port->valueint;
+  strcpy(user_config->mqtt_user, mqtt_username->valuestring);
+  strcpy(user_config->mqtt_password, mqtt_password->valuestring);
   user_config->version = USER_CONFIG_VERSION;
-  /* 如果 MQTT 配置为空，填入默认值 */
-  if ( user_config->mqtt_ip[0] < 0x20 ) {
-      sprintf( user_config->mqtt_ip, CONFIG_MQTT_IP );
-      user_config->mqtt_port = CONFIG_MQTT_PORT;
-      sprintf( user_config->mqtt_user, CONFIG_MQTT_USER );
-      sprintf( user_config->mqtt_password, CONFIG_MQTT_PASSWORD );
+  cJSON_Delete(json);
+
+  err = mico_system_context_update(context);
+  if (err != kNoErr) {
+    app_httpd_log("ERROR: Unable to save configuration: %d", err);
+    return web_send_json(req, HTTP_RES_500, "{\"success\":false,\"error\":\"save_failed\"}");
   }
-  
-  para_succ = true;
-  
-Save_Out:
-  
-  if(para_succ == true)
-  {
-    err = httpd_send_all_header(req, HTTP_RES_200, sizeof(wifisuccess), HTTP_CONTENT_HTML_STR);
-    require_noerr_action( err, exit, app_httpd_log("ERROR: Unable to send http wifisuccess headers.") );
-    
-    err = httpd_send_body(req->sock, wifisuccess, sizeof(wifisuccess));
-    require_noerr_action( err, exit, app_httpd_log("ERROR: Unable to send http wifisuccess body.") );
-    
-    context->micoSystemConfig.configured = allConfigured;
-    
-    /* 保存系统配置（含 WiFi 和用户配置）到 Flash */
-    mico_system_context_update( mico_system_context_get( ) );
-    
-    mico_system_power_perform( context, eState_Software_Reset );
-  }
-  else
-  {
-    err = httpd_send_all_header(req, HTTP_RES_200, sizeof(wififail), HTTP_CONTENT_HTML_STR);
-    require_noerr_action( err, exit, app_httpd_log("ERROR: Unable to send http wififail headers.") );
-    
-    err = httpd_send_body(req->sock, wififail, sizeof(wififail));
-    require_noerr_action( err, exit, app_httpd_log("ERROR: Unable to send http wififail body.") );    
-  }
-  
-exit:  
-  if(buf) free(buf);
-  return err; 
+
+  err = web_send_json(req, HTTP_RES_200, "{\"success\":true}");
+  if (err != kNoErr) return err;
+
+  mico_thread_msleep(1000);
+  return mico_system_power_perform(context, eState_Software_Reset);
 }
 
 struct httpd_wsgi_call g_app_handlers[] = {
   {"/", HTTPD_HDR_DEFORT, 0, web_send_wifisetting_page, NULL, NULL, NULL},
-  {"/result.htm", HTTPD_HDR_DEFORT, 0, NULL, web_send_result_page, NULL, NULL},
+  {"/api/config", HTTPD_HDR_DEFORT, 0, NULL, web_save_config, NULL, NULL},
   {"/setting.htm", HTTPD_HDR_DEFORT, 0, web_send_wifisetting_page, NULL, NULL, NULL},
 };
 
