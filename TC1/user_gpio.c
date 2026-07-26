@@ -7,7 +7,7 @@
 
 mico_gpio_t relay[Relay_NUM] = { Relay_0, Relay_1, Relay_2, Relay_3, Relay_4, Relay_5 };
 
-void user_led_set( char x )
+void user_led_set( signed char x )
 {
     if ( x == -1 )
         MicoGpioOutputTrigger( Led );
@@ -114,7 +114,6 @@ static void key_timeout_handler( void* arg )
 {
 
     static uint8_t key_trigger, key_continue;
-    static uint8_t key_last;
     //按键扫描程序
     uint8_t tmp = ~(0xfe | MicoGpioInputGet( Button ));
     key_trigger = tmp & (tmp ^ key_continue);
@@ -125,9 +124,7 @@ static void key_timeout_handler( void* arg )
     {
         //any button pressed
         key_time++;
-        if ( key_time < BUTTON_LONG_PRESS_TIME )
-            key_last = key_continue;
-        else
+        if ( key_time >= BUTTON_LONG_PRESS_TIME )
         {
             os_log("button long pressed:%d",key_time);
 
@@ -162,7 +159,6 @@ static void key_timeout_handler( void* arg )
         {
             MicoSystemReboot( );
         }
-        key_last = 0;
         mico_rtos_stop_timer( &user_key_timer );
     }
 }

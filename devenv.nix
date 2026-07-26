@@ -25,6 +25,6 @@ in
   '';
 
   scripts.build_and_flash.exec = ''
-    sudo make -f ./mico-os/makefiles/Makefile TC1@MK3031@moc download JTAG=jlink_swd run
+    sudo -E make -f ./mico-os/makefiles/Makefile TC1@MK3031@moc download JTAG=jlink_swd run
   '';
 }

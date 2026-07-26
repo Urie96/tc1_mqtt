@@ -45,15 +45,12 @@
 #define MICO_DEFAULT_APPLICATION_STACK_SIZE         (2000)
 
 /************************************************************************
- * Enable wlan connection, start easylink configuration if no wlan settings are existed */
-//#define MICO_WLAN_CONNECTION_ENABLE
-
-#define MICO_WLAN_CONFIG_MODE CONFIG_MODE_AWS
-
-#define EasyLink_TimeOut                60000 /**< EasyLink timeout 60 seconds. */
-
-#define EasyLink_ConnectWlan_Timeout    20000 /**< Connect to wlan after configured by easylink.
-                                                   Restart easylink after timeout: 20 seconds. */
+ * WLAN is managed by the application. SoftAP provisioning starts from user_wifi.c. */
+#define MICO_WLAN_CONNECTION_ENABLE 0
+#define MICO_WLAN_AUTO_CONFIG 0
+#define MICO_WLAN_CONFIG_MODE CONFIG_MODE_NONE
+#define MICO_CONFIG_EASYLINK_BTN_ENABLE 0
+#define MICO_SYSTEM_DISCOVERY_ENABLE 0
 
 /************************************************************************
  * Device enter MFG mode if MICO settings are erased. */
@@ -68,10 +65,6 @@
  * points, If one of these points is not executed in a predefined period, 
  * a watchdog reset will occur. */
 #define MICO_SYSTEM_MONITOR_ENABLE
-
-/************************************************************************
- * Add service _easylink._tcp._local. for discovery */
-#define MICO_SYSTEM_DISCOVERY_ENABLE  
 
 /************************************************************************
  * MiCO TCP server used for configuration and ota. */

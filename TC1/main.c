@@ -90,8 +90,8 @@ int application_start( void )
     MicoGpioInitialize( (mico_gpio_t) Button, INPUT_PULL_UP );
     if ( !MicoGpioInputGet( Button ) )
     {   //开机时按钮状态
-        os_log( "wifi_start_easylink" );
-        wifi_status = WIFI_STATE_NOEASYLINK;  //wifi_init中启动easylink
+        os_log( "wifi_start_softap" );
+        wifi_status = WIFI_STATE_SOFTAP_REQUESTED;  //wifi_init中启动SoftAP配网
     }
 
     MicoGpioInitialize( (mico_gpio_t) Led, OUTPUT_PUSH_PULL );

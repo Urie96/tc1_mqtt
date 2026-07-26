@@ -5,7 +5,7 @@
 
 #include "mico.h"
 
-extern void user_led_set(char x);
+extern void user_led_set(signed char x);
 extern void key_init(void);
 extern void user_relay_set(unsigned char x,unsigned char y );
 extern void user_relay_set_all( char y );
