@@ -29,7 +29,6 @@ $(NAME)_SOURCES := main.c\
 				   ota_server/ota_server.c\
 				   user_wifi.c\
 				   user_gpio.c\
-				   user_sntp.c\
 				   user_mqtt_client.c\
 				   user_ota.c\
 				   user_power.c\
@@ -37,8 +36,7 @@ $(NAME)_SOURCES := main.c\
 				   http_server/app_httpd.c \
 				   http_server/web_data.c
 				   
-$(NAME)_COMPONENTS := protocols/SNTP\
-					protocols/mqtt\
+$(NAME)_COMPONENTS := protocols/mqtt\
 					utilities/url\
 					daemons/http_server
 					

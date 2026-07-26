@@ -2,7 +2,6 @@
 
 #include "user_gpio.h"
 #include "user_wifi.h"
-#include "user_sntp.h"
 #include "user_power.h"
 #include "user_mqtt_client.h"
 #include "user_function.h"
@@ -12,9 +11,6 @@
 
 
 
-char first_sntp = 0;    //sntp校时成功标志位
-uint32_t sntp_count=0;
-uint32_t run_time=0;
 char strMac[16] = { 0 };
 uint32_t power=0;
 
@@ -162,7 +158,6 @@ int application_start( void )
         {
             err = user_mqtt_init( );
             require_noerr( err, exit );
-            sntp_init();
             network_service_started = true;
         }
         //发送功率数据

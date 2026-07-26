@@ -1,7 +1,5 @@
 #define os_log(format, ...)  custom_log("FUNCTION", format, ##__VA_ARGS__)
 
-#include "TimeUtils.h"
-
 #include "main.h"
 #include "user_gpio.h"
 #include "cJSON/cJSON.h"
@@ -9,7 +7,6 @@
 #include "user_mqtt_client.h"
 
 bool json_slot_analysis( unsigned char x, cJSON * pJsonRoot, cJSON * pJsonSend );
-bool json_slot_task_analysis( unsigned char x, unsigned char y, cJSON * pJsonRoot, cJSON * pJsonSend );
 
 void user_function_cmd_received( char *mqtt_topic , char *mqtt_data )
 {
@@ -33,20 +30,11 @@ void user_function_cmd_received( char *mqtt_topic , char *mqtt_data )
         cJSON_AddStringToObject( pRoot, "name", sys_config->micoSystemConfig.name );
         cJSON_AddNumberToObject( pRoot, "type", TYPE );
         cJSON_AddStringToObject( pRoot, "type_name", TYPE_NAME );
-        uint32_t run_time = UpTicks( );   // get time in miiliseconds since RTOS start, roll over every 49 days, 17 hours.
-        cJSON_AddNumberToObject( pRoot, "run_time", run_time/1000 );
         //IP、mac
         IPStatusTypedef para;
         micoWlanGetIPStatus( &para, Station );
         cJSON_AddStringToObject( pRoot, "ip", para.ip );
         cJSON_AddStringToObject( pRoot, "mac", strMac );
-        //时间
-        iso8601_time_t iso8601_time;
-        mico_time_get_iso8601_time( &iso8601_time );
-        char time_str[26];
-        sprintf(time_str, "%.27s", (char*)&iso8601_time);
-        cJSON_AddStringToObject( pRoot, "time", time_str );
-        cJSON_AddNumberToObject( pRoot, "sntp_count", sntp_count );
         
         char *s = cJSON_Print( pRoot );
 //        os_log( "pRoot: %s\r\n", s );
@@ -71,12 +59,6 @@ void user_function_cmd_received( char *mqtt_topic , char *mqtt_data )
     {
         os_log("version:%s",VERSION);
         cJSON_AddStringToObject( json_send, "version", VERSION );
-    }
-    //解析运行时间
-    cJSON *p_run_time = cJSON_GetObjectItem( pJsonRoot, "run_time" );
-    if ( p_run_time )
-    {
-        cJSON_AddNumberToObject( json_send, "run_time", run_time );
     }
     //解析功率
     cJSON *p_power = cJSON_GetObjectItem( pJsonRoot, "power" );

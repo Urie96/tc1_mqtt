@@ -2,7 +2,6 @@
 #define __MAIN_H_
 
 #include "mico.h"
-#include "MiCOKit_EXT.h"
 
 #define VERSION "v0.0.0"
 
@@ -57,10 +56,6 @@ typedef struct
     char user[maxNameLen];
 } user_config_t;
 
-extern char first_sntp;
-extern uint32_t sntp_count;
-
-extern uint32_t run_time;
 extern char strMac[16];
 extern uint32_t power;
 extern system_config_t * sys_config;

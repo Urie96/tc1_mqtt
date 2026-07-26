@@ -4,7 +4,6 @@
 
 
 #include "mico.h"
-#include "MiCOKit_EXT.h"
 
 
 enum {
