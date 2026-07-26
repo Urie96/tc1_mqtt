@@ -44,10 +44,10 @@ void appRestoreDefault_callback( void * const user_config_data, uint32_t size )
     userConfigDefault->mqtt_port = CONFIG_MQTT_PORT;
     sprintf(userConfigDefault->mqtt_user, CONFIG_MQTT_USER);
     sprintf(userConfigDefault->mqtt_password, CONFIG_MQTT_PASSWORD);
-    //初始化wifi及密码
-    strcpy( mico_system_context_get( )->micoSystemConfig.ssid, CONFIG_SSID );
-    strcpy( mico_system_context_get( )->micoSystemConfig.user_key, CONFIG_USER_KEY );
-    mico_system_context_get( )->micoSystemConfig.user_keyLength = strlen( CONFIG_USER_KEY );
+    //初始化wifi及密码为空，启动后进入 SoftAP 配网
+    mico_system_context_get( )->micoSystemConfig.ssid[0] = 0;
+    mico_system_context_get( )->micoSystemConfig.user_key[0] = 0;
+    mico_system_context_get( )->micoSystemConfig.user_keyLength = 0;
 
     userConfigDefault->version = USER_CONFIG_VERSION;
     for ( i = 0; i < SLOT_NUM; i++ )
@@ -73,6 +73,7 @@ int application_start( void )
 
     uint8_t main_num=0;
     uint32_t power_last = 0xffffffff;
+    bool network_service_started = false;
     OSStatus err = kNoErr;
 
 //    for ( i = 0; i < Relay_NUM; i++ )
@@ -150,16 +151,20 @@ int application_start( void )
 
     // user_udp_init( );
     key_init( );
-    err = user_mqtt_init( );
-    require_noerr( err, exit );
-    sntp_init();
     user_power_init();
 
-    /* start http server thread */
-//      app_httpd_start();
+    /* start http server thread (仅在 SoftAP 模式下启用) */
+//    app_httpd_start( );
     while ( 1 )
     {
         main_num++;
+        if ( network_service_started == false && wifi_status == WIFI_STATE_CONNECTED )
+        {
+            err = user_mqtt_init( );
+            require_noerr( err, exit );
+            sntp_init();
+            network_service_started = true;
+        }
         //发送功率数据
         if ( power_last != power || main_num>4 )
         {

@@ -105,6 +105,16 @@ static int web_send_result_page(httpd_request_t *req)
   memset(context->micoSystemConfig.bssid, 0x0, 6);
   context->micoSystemConfig.security = SECURITY_TYPE_AUTO;
   context->micoSystemConfig.dhcpEnable = true;
+
+  /* 保存版本号，防止下次启动时恢复默认配置 */
+  user_config->version = USER_CONFIG_VERSION;
+  /* 如果 MQTT 配置为空，填入默认值 */
+  if ( user_config->mqtt_ip[0] < 0x20 ) {
+      sprintf( user_config->mqtt_ip, CONFIG_MQTT_IP );
+      user_config->mqtt_port = CONFIG_MQTT_PORT;
+      sprintf( user_config->mqtt_user, CONFIG_MQTT_USER );
+      sprintf( user_config->mqtt_password, CONFIG_MQTT_PASSWORD );
+  }
   
   para_succ = true;
   
@@ -120,7 +130,8 @@ Save_Out:
     
     context->micoSystemConfig.configured = allConfigured;
     
-    mico_system_context_update(context);
+    /* 保存系统配置（含 WiFi 和用户配置）到 Flash */
+    mico_system_context_update( mico_system_context_get( ) );
     
     mico_system_power_perform( context, eState_Software_Reset );
   }
