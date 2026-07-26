@@ -560,13 +560,22 @@ OSStatus user_mqtt_hass_auto_slot( char slot_id )
         sprintf( topic_buf, "homeassistant/switch/%s/slot%d/config", sys_config->micoSystemConfig.name, slot_id );
         sprintf( send_buf, "{"
                  "\"name\":\"%s_slot%d\","
-                 "\"state_topic\":\"stat/%s/slot%d\","
-                 "\"command_topic\":\"cmnd/%s\","
-                 "\"payload_on\":\"{\\\"slot%d\\\":1}\","
-                 "\"payload_off\":\"{\\\"slot%d\\\":0}\","
-                 "\"availability_topic\":\"stat/%s\""
+                 "\"uniq_id\":\"%s_slot%d\","
+                 "\"stat_t\":\"stat/%s/slot%d\","
+                 "\"cmd_t\":\"cmnd/%s\","
+                 "\"pl_on\":\"{\\\"slot%d\\\":1}\","
+                 "\"pl_off\":\"{\\\"slot%d\\\":0}\","
+                 "\"avty_t\":\"stat/%s\","
+                 "\"dev\":{\"ids\":[\"%s\"],\"name\":\"%s\",\"mf\":\"ZC\",\"mdl\":\"TC1\"},"
+                 "\"o\":{\"name\":\"tc1_mqtt\",\"sw\":\"" VERSION "\"}"
                  "}",
-                 sys_config->micoSystemConfig.name, slot_id, sys_config->micoSystemConfig.name, slot_id, sys_config->micoSystemConfig.name, slot_id, slot_id, sys_config->micoSystemConfig.name );
+                 sys_config->micoSystemConfig.name, slot_id,
+                 sys_config->micoSystemConfig.name, slot_id,
+                 sys_config->micoSystemConfig.name, slot_id,
+                 sys_config->micoSystemConfig.name,
+                 slot_id, slot_id,
+                 sys_config->micoSystemConfig.name,
+                 strMac, sys_config->micoSystemConfig.name );
         err = user_mqtt_send_topic( topic_buf, send_buf, 1, 1 );
     }
     if ( send_buf ) free( send_buf );
@@ -591,12 +600,21 @@ OSStatus user_mqtt_hass_auto_power( void )
         sprintf( topic_buf, "homeassistant/sensor/%s/power/config", sys_config->micoSystemConfig.name );
         sprintf( send_buf, "{"
                  "\"name\":\"%s_power\","
-                 "\"state_topic\":\"stat/%s/power\","
-                 "\"unit_of_measurement\":\"W\","
-                 "\"icon\":\"mdi:gauge\","
-                 "\"availability_topic\":\"stat/%s\""
+                 "\"uniq_id\":\"%s_power\","
+                 "\"stat_t\":\"stat/%s/power\","
+                 "\"unit_of_meas\":\"W\","
+                 "\"dev_cla\":\"power\","
+                 "\"stat_cla\":\"measurement\","
+                 "\"ic\":\"mdi:gauge\","
+                 "\"avty_t\":\"stat/%s\","
+                 "\"dev\":{\"ids\":[\"%s\"],\"name\":\"%s\",\"mf\":\"ZC\",\"mdl\":\"TC1\"},"
+                 "\"o\":{\"name\":\"tc1_mqtt\",\"sw\":\"" VERSION "\"}"
                  "}",
-                 sys_config->micoSystemConfig.name, sys_config->micoSystemConfig.name, sys_config->micoSystemConfig.name );
+                 sys_config->micoSystemConfig.name,
+                 sys_config->micoSystemConfig.name,
+                 sys_config->micoSystemConfig.name,
+                 sys_config->micoSystemConfig.name,
+                 strMac, sys_config->micoSystemConfig.name );
 
         err = user_mqtt_send_topic( topic_buf, send_buf, 1, 1 );
     }
