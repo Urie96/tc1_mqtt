@@ -39,4 +39,8 @@ $(NAME)_SOURCES := main.c\
 $(NAME)_COMPONENTS := protocols/mqtt\
 					utilities/url\
 					daemons/http_server
+
+# Generate web_data.c from editable HTML pages during the MiCO build phase.
+TC1_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
+EXTRA_TARGET_MAKEFILES += $(TC1_DIR)tools/web_data.mk
 					
