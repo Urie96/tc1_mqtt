@@ -481,7 +481,8 @@ void ota_server_stop( void )
     ota_server_context->ota_control = OTA_CONTROL_STOP;
 }
 
-OTA_CONTROL_E ota_server_get( void )
+OTA_CONTROL_E ota_server_state_get( void )
 {
+    if (ota_server_context == NULL) return OTA_CONTROL_IDLE;
     return ota_server_context->ota_control;
 }

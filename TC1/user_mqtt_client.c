@@ -85,6 +85,9 @@ OSStatus user_recv_handler( void *arg );
 // OSStatus user_mqtt_send_tc1_state(void);
 // OSStatus user_mqtt_hass_auto_slot( char slot_id );
 // OSStatus user_mqtt_hass_auto_power( void );
+// OSStatus user_mqtt_send_tc1_state(void);
+// OSStatus user_mqtt_hass_auto_slot( char slot_id );
+// OSStatus user_mqtt_hass_auto_power( void );
 
 bool isconnect = false;
 mico_queue_t mqtt_msg_send_queue = NULL;
@@ -100,6 +103,7 @@ char topic_set[MAX_MQTT_TOPIC_SIZE];
 
 mico_timer_t timer_handle;
 static uint8_t timer_status = 0;
+
 void user_mqtt_timer_func( void *arg )
 {
     char *buf1 = NULL;
@@ -502,9 +506,12 @@ OSStatus user_mqtt_send( char *arg )
 }
 
 //更新ha开关状态
+// 离线时直接返回；重连后 timer 会通过 user_function_cmd_received 触发全部 6 路上报
 OSStatus user_mqtt_send_slot_state(unsigned char slot_id )
 {
     OSStatus err = kUnknownErr;
+    if (slot_id >= SLOT_NUM) return err;
+
     if (isconnect == false)
     {
         return err;

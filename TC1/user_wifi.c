@@ -77,10 +77,6 @@ void wifi_start_softap( )
     softap_started = true;
     os_log("SoftAP started: %s, IP: 10.10.10.1", wNetConfig.wifi_ssid);
 
-    // 启动 HTTP 配置服务器
-    err = app_httpd_start( );
-    if ( err != kNoErr ) os_log("HTTP server start failed: %d", err);
-
     user_led_set( 1 );
 }
 
@@ -88,7 +84,6 @@ void wifi_stop_softap( )
 {
     if ( softap_started )
     {
-        app_httpd_stop( );
         micoWlanSuspendSoftAP( );
         softap_started = false;
     }

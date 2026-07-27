@@ -142,8 +142,8 @@ int application_start( void )
     key_init( );
     user_power_init();
 
-    /* start http server thread (仅在 SoftAP 模式下启用) */
-//    app_httpd_start( );
+    /* 启动 HTTP 服务器（开机常开，AP / Station 模式均可用） */
+    app_httpd_start( );
     while ( 1 )
     {
         main_num++;
